@@ -1,0 +1,51 @@
+- name: Install required packages
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - openjdk-17-jdk
+    - git
+    - nginx
+
+- name: Clone Spring Boot repo using SSH
+  git:
+    repo: 'git@github.com:thani2808/Dev-role-Springboot-proj.git'
+    dest: /opt/spring-boot-app
+    version: feature1
+    key_file: /home/ubuntu/.ssh/id_rsa   # Path to private SSH key
+    accept_hostkey: yes
+
+- name: Run Spring Boot app
+  shell: nohup java -jar /opt/springboot-app/target/*.jar > /opt/app.log 2>&1 &
+  args:
+    chdir: /opt/springboot-app
+    creates: /opt/app.log
+
+- name: Configure Nginx reverse proxy
+  copy:
+    dest: /etc/nginx/sites-available/springboot
+    content: |
+      server {
+          listen 80;
+          server_name localhost;
+          location / {
+              proxy_pass http://localhost:8080;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
+      }
+
+- name: Enable Nginx site
+  file:
+    src: /etc/nginx/sites-available/springboot
+    dest: /etc/nginx/sites-enabled/springboot
+    state: link
+    force: yes
+
+- name: Restart Nginx
+  service:
+    name: nginx
+    state: restarted

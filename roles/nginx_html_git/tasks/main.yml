@@ -1,0 +1,21 @@
+- name: Install Nginx and Git
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - nginx
+    - git
+
+- name: Clone HTML repo using SSH
+  git:
+    repo: 'git@github.com:thani2808/dan-p81.git'
+    dest: /var/www/html
+    version: feature1
+    key_file: /home/ubuntu/.ssh/id_rsa  # Adjust path as needed
+    accept_hostkey: yes
+
+- name: Restart Nginx
+  service:
+    name: nginx
+    state: restarted

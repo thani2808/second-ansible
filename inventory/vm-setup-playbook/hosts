@@ -1,2 +1,5 @@
-[webservers]
-ec2 ansible_host=10.0.103.51 ansible_user=ubuntu ansible_ssh_private_key_file=/home/ubuntu/.ssh/id_rs
+[html_server]
+html1 ansible_host=10.0.3.10 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa
+
+[java_server]
+java1 ansible_host=10.0.3.11 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa
