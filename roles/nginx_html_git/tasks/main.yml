@@ -1,21 +1,58 @@
-- name: Install Nginx and Git
-  apt:
-    name: "{{ item }}"
-    state: present
-    update_cache: yes
-  loop:
-    - nginx
-    - git
+---
+
+- name: Ensure .ssh directory exists
+  file:
+    path: /home/ubuntu/.ssh
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0700'
+
+- name: Copy SSH private key
+  copy:
+    src: id_rsa  # Make sure this file is placed under roles/nginx_html_git/files/
+    dest: /home/ubuntu/.ssh/id_rsa
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+
+- name: Add GitHub to known_hosts
+  known_hosts:
+    name: github.com
+    key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
+    path: /home/ubuntu/.ssh/known_hosts
+
+- name: Set permissions on known_hosts
+  file:
+    path: /home/ubuntu/.ssh/known_hosts
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Set Git safe directory
+  command: git config --global --add safe.directory /var/www/html
+  become: yes
+  become_user: ubuntu
+
+- name: Remove existing HTML directory (optional cleanup)
+  file:
+    path: /var/www/html
+    state: absent
+
+- name: Recreate HTML directory
+  file:
+    path: /var/www/html
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
 
 - name: Clone HTML repo using SSH
   git:
-    repo: 'git@github.com:thani2808/dan-p81.git'
+    repo: git@github.com:thani2808/dan-p81.git
     dest: /var/www/html
-    version: feature1
-    key_file: /home/ubuntu/.ssh/id_rsa  # Adjust path as needed
+    version: main
+    key_file: /home/ubuntu/.ssh/id_rsa
     accept_hostkey: yes
-
-- name: Restart Nginx
-  service:
-    name: nginx
-    state: restarted
+  become: yes
+  become_user: ubuntu
