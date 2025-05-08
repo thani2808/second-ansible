@@ -1,3 +1,5 @@
+---
+
 - name: Install required packages
   apt:
     name: "{{ item }}"
@@ -8,13 +10,53 @@
     - git
     - nginx
 
+- name: Ensure .ssh directory exists
+  file:
+    path: /home/ubuntu/.ssh
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0700'
+
+- name: Copy SSH private key for GitHub access
+  copy:
+    src: id_rsa  # This file should be in roles/nginx_java_git/files/id_rsa
+    dest: /home/ubuntu/.ssh/id_rsa
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+
+- name: Add GitHub to known_hosts
+  known_hosts:
+    name: github.com
+    key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
+    path: /home/ubuntu/.ssh/known_hosts
+
+- name: Set permissions on known_hosts
+  file:
+    path: /home/ubuntu/.ssh/known_hosts
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Ensure /opt/springboot-app directory exists
+  file:
+    path: /opt/springboot-app
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+  become: yes
+
 - name: Clone Spring Boot repo using SSH
   git:
     repo: 'git@github.com:thani2808/Dev-role-Springboot-proj.git'
-    dest: /opt/spring-boot-app
-    version: feature1
-    key_file: /home/ubuntu/.ssh/id_rsa   # Path to private SSH key
+    dest: /opt/springboot-app
+    version: main
+    key_file: /home/ubuntu/.ssh/id_rsa
     accept_hostkey: yes
+  become: yes
+  become_user: ubuntu
 
 - name: Run Spring Boot app
   shell: nohup java -jar /opt/springboot-app/target/*.jar > /opt/app.log 2>&1 &
@@ -44,6 +86,11 @@
     dest: /etc/nginx/sites-enabled/springboot
     state: link
     force: yes
+
+- name: Remove default Nginx site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
 
 - name: Restart Nginx
   service:

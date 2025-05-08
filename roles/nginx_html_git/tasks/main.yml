@@ -1,21 +1,67 @@
-- name: Install Nginx and Git
+---
+- name: Ensure Git is installed
   apt:
-    name: "{{ item }}"
+    name: git
     state: present
     update_cache: yes
-  loop:
-    - nginx
-    - git
 
-- name: Clone HTML repo using SSH
-  git:
-    repo: 'git@github.com:thani2808/dan-p81.git'
-    dest: /var/www/html
-    version: feature1
-    key_file: /home/ubuntu/.ssh/id_rsa  # Adjust path as needed
-    accept_hostkey: yes
+- name: Install Nginx
+  apt:
+    name: nginx
+    state: present
 
-- name: Restart Nginx
+- name: Start and enable Nginx
   service:
     name: nginx
-    state: restarted
+    state: started
+    enabled: true
+
+- name: Ensure .ssh directory exists
+  file:
+    path: /home/ubuntu/.ssh
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0700'
+
+- name: Copy SSH private key
+  copy:
+    src: id_rsa
+    dest: /home/ubuntu/.ssh/id_rsa
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+
+- name: Add GitHub to known_hosts
+  known_hosts:
+    name: github.com
+    key: "{{ lookup('pipe', 'ssh-keyscan github.com') }}"
+    path: /home/ubuntu/.ssh/known_hosts
+
+- name: Set Git safe directory
+  become_user: ubuntu
+  command: git config --global --add safe.directory /var/www/html
+
+- name: Remove existing HTML directory
+  file:
+    path: /var/www/html
+    state: absent
+
+- name: Ensure ubuntu owns /var/www/html
+  file:
+    path: /var/www/html
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+    recurse: yes
+
+- name: Clone Git repo
+  git:
+    repo: git@github.com:thani2808/dan-p81.git
+    dest: /var/www/html
+    version: main
+    key_file: /home/ubuntu/.ssh/id_rsa
+    accept_hostkey: yes
+    force: yes
+  become_user: ubuntu
