@@ -1,11 +1,11 @@
 - name: Setup HTML server
   hosts: html_server
-  become: yes
+  become: true
   roles:
     - nginx_html_git
 
 - name: Setup Java Spring Boot server
   hosts: java_server
-  become: yes
+  become: true
   roles:
     - nginx_java_git
